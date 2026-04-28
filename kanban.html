@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务看板 - 0xDraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .breadcrumb {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;
+        }
+        .breadcrumb a { color: var(--accent-blue); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb i { width: 14px; height: 14px; }
+
+        /* Project Selector in Header */
+        .project-selector { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; margin-left: 16px; transition: all var(--transition-fast); }
+        .project-selector:hover { border-color: var(--accent-blue); }
+        .project-selector-info { display: flex; flex-direction: column; }
+        .project-selector-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .project-selector-name { font-size: 13px; font-weight: 600; color: var(--text-primary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .project-selector i { width: 14px; height: 14px; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="logo" style="text-decoration:none;color:inherit;">
+                    <div class="logo-icon"><i data-lucide="bot" class="logo-botsvg"></i></div>
+                    <div class="logo-text">
+                        <span class="logo-title">0xDraft</span>
+                        <span class="logo-subtitle">Multi-Agent Team</span>
+                    </div>
+                </a>
+
+                <div class="project-selector" onclick="window.location.href='index.html'">
+                    <div class="project-selector-info">
+                        <span class="project-selector-label">当前项目</span>
+                        <span class="project-selector-name" id="currentProjectName">载入中...</span>
+                    </div>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+
+                <nav class="page-nav">
+                    <a href="index.html" class="page-nav-item"><i data-lucide="layout-dashboard"></i> 首页</a>
+                    <a href="analysis.html" class="page-nav-item"><i data-lucide="lightbulb"></i> 分析</a>
+                    <a href="kanban.html" class="page-nav-item active"><i data-lucide="layout-grid"></i> 看板</a>
+                    <a href="agents.html" class="page-nav-item"><i data-lucide="users"></i> Agent</a>
+                    <a href="preview.html" class="page-nav-item"><i data-lucide="file-text"></i> 预览</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" title="通知"><i data-lucide="bell"></i><span class="badge">3</span></button>
+                <div class="user-avatar"><span>U</span></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="page-container">
+                <nav class="breadcrumb">
+                    <a href="index.html"><i data-lucide="home"></i> 首页</a>
+                    <i data-lucide="chevron-right"></i>
+                    <span id="breadcrumbProject">项目名</span>
+                    <i data-lucide="chevron-right"></i>
+                    <span>任务看板</span>
+                </nav>
+
+                <div class="page-header-bar">
+                    <div>
+                        <h1><i data-lucide="layout-grid"></i> 任务看板</h1>
+                        <p>通过看板管理创作流程，跟踪任务状态和进度</p>
+                    </div>
+                    <div class="kanban-actions" style="display:flex;align-items:center;gap:12px;">
+                        <span class="task-count" style="font-size:14px;color:var(--text-secondary);">共 <strong id="totalTaskCount" style="color:var(--accent-cyan);">0</strong> 个任务</span>
+                        <button class="btn btn-secondary" id="filterBtn">
+                            <i data-lucide="filter"></i> 筛选
+                        </button>
+                        <button class="btn btn-primary" id="addTaskBtn">
+                            <i data-lucide="plus"></i> 添加任务
+                        </button>
+                    </div>
+                </div>
+
+                <div class="kanban-board" id="kanbanBoard">
+                    <!-- backlog -->
+                    <div class="kanban-column" data-status="backlog">
+                        <div class="column-header">
+                            <div class="column-title">
+                                <span class="column-dot backlog"></span>
+                                <i data-lucide="clipboard-list" style="width:16px;height:16px;color:var(--text-secondary);"></i>
+                                <h3>待认领</h3>
+                                <span class="column-count" id="backlogCount">0</span>
+                            </div>
+                            <button class="column-add-btn" data-status="backlog" title="添加任务">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content" data-status="backlog"></div>
+                    </div>
+                    <!-- in_progress -->
+                    <div class="kanban-column" data-status="in_progress">
+                        <div class="column-header">
+                            <div class="column-title">
+                                <span class="column-dot in_progress"></span>
+                                <i data-lucide="clock" style="width:16px;height:16px;color:var(--accent-amber);"></i>
+                                <h3>进行中</h3>
+                                <span class="column-count" id="inProgressCount">0</span>
+                            </div>
+                            <button class="column-add-btn" data-status="in_progress" title="添加任务">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content" data-status="in_progress"></div>
+                    </div>
+                    <!-- review -->
+                    <div class="kanban-column" data-status="review">
+                        <div class="column-header">
+                            <div class="column-title">
+                                <span class="column-dot review"></span>
+                                <i data-lucide="eye" style="width:16px;height:16px;color:var(--accent-purple);"></i>
+                                <h3>待审视</h3>
+                                <span class="column-count" id="reviewCount">0</span>
+                            </div>
+                            <button class="column-add-btn" data-status="review" title="添加任务">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content" data-status="review"></div>
+                    </div>
+                    <!-- done -->
+                    <div class="kanban-column" data-status="done">
+                        <div class="column-header">
+                            <div class="column-title">
+                                <span class="column-dot done"></span>
+                                <i data-lucide="check-circle-2" style="width:16px;height:16px;color:var(--accent-green);"></i>
+                                <h3>已完成</h3>
+                                <span class="column-count" id="doneCount">0</span>
+                            </div>
+                            <button class="column-add-btn" data-status="done" title="添加任务">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content" data-status="done"></div>
+                    </div>
+                    <!-- published -->
+                    <div class="kanban-column" data-status="published">
+                        <div class="column-header">
+                            <div class="column-title">
+                                <span class="column-dot published"></span>
+                                <i data-lucide="rocket" style="width:16px;height:16px;color:var(--accent-cyan);"></i>
+                                <h3>已发布</h3>
+                                <span class="column-count" id="publishedCount">0</span>
+                            </div>
+                            <button class="column-add-btn" data-status="published" title="添加任务">
+                                <i data-lucide="plus"></i>
+                            </button>
+                        </div>
+                        <div class="column-content" data-status="published"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left">
+                <span class="status-indicator online"></span>
+                <span>系统就绪</span>
+            </div>
+            <div class="footer-center">
+                <span id="lastUpdate">最后更新: --</span>
+            </div>
+            <div class="footer-right">
+                <a href="settings.html" class="footer-btn" title="系统设置">
+                    <i data-lucide="settings"></i>
+                </a>
+                <button class="footer-btn" id="clearDataBtn" title="清除所有数据">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </footer>
+
+        <!-- Modal container -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal" id="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modalTitle">Modal Title</h3>
+                    <button class="modal-close" id="modalClose"><i data-lucide="x"></i></button>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+                <div class="modal-footer" id="modalFooter"></div>
+            </div>
+        </div>
+
+        <!-- Toast container -->
+        <div class="toast-container" id="toastContainer"></div>
+
+        <!-- Execution panel -->
+        <div class="execution-panel" id="executionPanel">
+            <div class="execution-header">
+                <h3><i data-lucide="terminal"></i> 执行日志</h3>
+                <button class="execution-close" id="executionClose"><i data-lucide="x"></i></button>
+            </div>
+            <div class="execution-content" id="executionContent"></div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="store.js"></script>
+    <script src="components.js"></script>
+    <script src="markdown.js"></script>
+    <script src="kanban.js"></script>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            function syncProject() {
+                const project = Store.getCurrentProject();
+                if (project) {
+                    document.getElementById('currentProjectName').textContent = project.name;
+                    document.getElementById('breadcrumbProject').textContent = project.name;
+                }
+            }
+            syncProject();
+            Store.subscribe('currentProjectId', () => {
+                syncProject();
+                Kanban.render();
+            });
+        });
+    </script>
+</body>
+</html>

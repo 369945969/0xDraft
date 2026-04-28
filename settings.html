@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - 0xDraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .breadcrumb {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;
+        }
+        .breadcrumb a { color: var(--accent-blue); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb i { width: 14px; height: 14px; }
+
+        .settings-layout {
+            display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start;
+        }
+        .settings-nav {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            position: sticky; top: 24px;
+        }
+        .settings-nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px; width: 100%; background: none; border: none;
+            color: var(--text-secondary); font-size: 14px; font-weight: 500;
+            cursor: pointer; text-align: left; transition: all var(--transition-fast);
+            border-left: 3px solid transparent;
+        }
+        .settings-nav-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .settings-nav-item.active {
+            background: rgba(99,102,241,0.1); color: var(--accent-blue);
+            border-left-color: var(--accent-blue);
+        }
+        .settings-nav-item i { width: 18px; height: 18px; }
+
+        .settings-panels { display: flex; flex-direction: column; gap: 24px; }
+        .settings-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        .settings-panel-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border-default);
+            background: var(--bg-secondary);
+        }
+        .settings-panel-header h2 {
+            font-family: 'Space Grotesk', sans-serif; font-size: 18px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .settings-panel-header h2 i { width: 22px; height: 22px; color: var(--accent-blue); }
+        .settings-panel-header p {
+            font-size: 13px; color: var(--text-secondary); margin-top: 4px;
+        }
+        .settings-panel-body { padding: 24px; }
+
+        .form-row {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 0; border-bottom: 1px solid var(--border-default);
+        }
+        .toggle-row:last-child { border-bottom: none; }
+        .toggle-info h4 { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+        .toggle-info p { font-size: 13px; color: var(--text-secondary); }
+        .toggle-switch {
+            width: 44px; height: 24px; border-radius: 12px;
+            background: var(--border-default); position: relative; cursor: pointer;
+            transition: background var(--transition-fast); flex-shrink: 0;
+        }
+        .toggle-switch.active { background: var(--accent-green); }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: white; transition: transform var(--transition-fast);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .toggle-switch.active::after { transform: translateX(20px); }
+
+        .danger-zone {
+            border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.05);
+        }
+        .danger-zone .settings-panel-header { background: rgba(239,68,68,0.1); }
+        .danger-zone .settings-panel-header h2 i { color: var(--accent-red); }
+
+        .btn-block { width: 100%; justify-content: center; }
+
+        .chapter-template-list {
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .chapter-template-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+        }
+        .chapter-template-item .num {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--accent-purple); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 600; flex-shrink: 0;
+        }
+        .chapter-template-item .title { flex: 1; font-size: 14px; }
+        .chapter-template-item .agent-tag {
+            font-size: 12px; padding: 3px 10px; border-radius: 10px;
+            background: var(--bg-card); color: var(--text-secondary);
+        }
+
+        .data-actions {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+        }
+
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000; }
+        .toast {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px; background: var(--bg-card);
+            border: 1px solid var(--border-default); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg); min-width: 300px; max-width: 420px;
+            animation: slideIn 250ms ease; margin-top: 12px;
+        }
+        .toast.hiding { animation: slideOut 250ms ease forwards; }
+        @keyframes slideIn { from { opacity:0; transform:translateX(100%);} to { opacity:1; transform:translateX(0);} }
+        @keyframes slideOut { from { opacity:1; transform:translateX(0);} to { opacity:0; transform:translateX(100%);} }
+        .toast.success .toast-icon { color: var(--accent-green); }
+        .toast.error .toast-icon { color: var(--accent-red); }
+        .toast.info .toast-icon { color: var(--accent-blue); }
+        .toast-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .toast-icon i { width: 20px; height: 20px; }
+        .toast-message { flex: 1; font-size: 14px; }
+
+        @media (max-width: 768px) {
+            .settings-layout { grid-template-columns: 1fr; }
+            .settings-nav { position: static; }
+            .form-row { grid-template-columns: 1fr; }
+            .data-actions { grid-template-columns: 1fr; }
+        }
+            /* Project Selector in Header */
+        .project-selector { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; margin-left: 16px; transition: all var(--transition-fast); }
+        .project-selector:hover { border-color: var(--accent-blue); }
+        .project-selector-info { display: flex; flex-direction: column; }
+        .project-selector-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .project-selector-name { font-size: 13px; font-weight: 600; color: var(--text-primary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .project-selector i { width: 14px; height: 14px; color: var(--text-secondary); }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="logo" style="text-decoration:none;color:inherit;">
+                    <div class="logo-icon"><i data-lucide="bot" class="logo-botsvg"></i></div>
+                    <div class="logo-text">
+                        <span class="logo-title">0xDraft</span>
+                        <span class="logo-subtitle">Multi-Agent Team</span>
+                    </div>
+                </a>
+
+                <div class="project-selector" onclick="window.location.href='index.html'">
+                    <div class="project-selector-info">
+                        <span class="project-selector-label">当前项目</span>
+                        <span class="project-selector-name" id="currentProjectName">载入中...</span>
+                    </div>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+
+                <nav class="page-nav">
+                    <a href="index.html" class="page-nav-item"><i data-lucide="layout-dashboard"></i> 首页</a>
+                    <a href="analysis.html" class="page-nav-item"><i data-lucide="lightbulb"></i> 分析</a>
+                    <a href="kanban.html" class="page-nav-item"><i data-lucide="layout-grid"></i> 看板</a>
+                    <a href="agents.html" class="page-nav-item"><i data-lucide="users"></i> Agent</a>
+                    <a href="preview.html" class="page-nav-item"><i data-lucide="file-text"></i> 预览</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" title="通知"><i data-lucide="bell"></i><span class="badge">3</span></button>
+                <div class="user-avatar"><span>U</span></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="page-container">
+                <nav class="breadcrumb">
+                    <a href="index.html"><i data-lucide="home"></i> 首页</a>
+                    <i data-lucide="chevron-right"></i>
+                    <span id="breadcrumbProject">项目名</span>
+                    <i data-lucide="chevron-right"></i>
+                    <span>系统设置</span>
+                </nav>
+
+                <div class="settings-layout">
+                    <nav class="settings-nav">
+                        <button class="settings-nav-item active" data-target="projectPanel">
+                            <i data-lucide="folder"></i> 项目配置
+                        </button>
+                        <button class="settings-nav-item" data-target="chaptersPanel">
+                            <i data-lucide="file-text"></i> 章节配置
+                        </button>
+                        <button class="settings-nav-item" data-target="exportPanel">
+                            <i data-lucide="download"></i> 导出设置
+                        </button>
+                        <button class="settings-nav-item" data-target="appearancePanel">
+                            <i data-lucide="palette"></i> 外观设置
+                        </button>
+                        <button class="settings-nav-item" data-target="dataPanel">
+                            <i data-lucide="database"></i> 数据管理
+                        </button>
+                    </nav>
+
+                    <div class="settings-panels">
+                        <!-- Project Settings -->
+                        <div class="settings-panel" id="projectPanel">
+                            <div class="settings-panel-header">
+                                <h2><i data-lucide="folder"></i> 项目配置</h2>
+                                <p>配置当前项目的基本信息</p>
+                            </div>
+                            <div class="settings-panel-body">
+                                <div class="form-group">
+                                    <label class="form-label">项目名称</label>
+                                    <input type="text" class="form-input" id="projectName" placeholder="输入项目名称">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">项目描述</label>
+                                    <textarea class="form-textarea" id="projectDesc" rows="3" placeholder="简要描述项目内容..."></textarea>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">创建时间</label>
+                                        <input type="text" class="form-input" id="projectCreated" disabled>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">最后更新</label>
+                                        <input type="text" class="form-input" id="projectUpdated" disabled>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+                                    <button class="btn btn-secondary" id="resetProjectBtn">重置</button>
+                                    <button class="btn btn-primary" id="saveProjectBtn"><i data-lucide="save"></i> 保存配置</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chapters Settings -->
+                        <div class="settings-panel" id="chaptersPanel" style="display:none;">
+                            <div class="settings-panel-header">
+                                <h2><i data-lucide="file-text"></i> 章节配置</h2>
+                                <p>需求分析后自动创建任务的章节模板</p>
+                            </div>
+                            <div class="settings-panel-body">
+                                <div class="chapter-template-list" id="chapterTemplateList">
+                                    <!-- filled dynamically -->
+                                </div>
+                                <div style="margin-top:16px;padding:16px;background:var(--bg-secondary);border-radius:var(--radius-md);">
+                                    <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+                                        <i data-lucide="info" style="width:14px;height:14px;display:inline;vertical-align:text-bottom;margin-right:4px;"></i>
+                                        这些模板用于"需求分析"功能，分析后会根据输入内容匹配并生成对应的章节任务。修改模板仅影响新创建的任务。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Export Settings -->
+                        <div class="settings-panel" id="exportPanel" style="display:none;">
+                            <div class="settings-panel-header">
+                                <h2><i data-lucide="download"></i> 导出设置</h2>
+                                <p>配置文档和数据的默认导出选项</p>
+                            </div>
+                            <div class="settings-panel-body">
+                                <div class="form-group">
+                                    <label class="form-label">默认导出格式</label>
+                                    <select class="form-select" id="defaultExportFormat">
+                                        <option value="md">Markdown (.md)</option>
+                                        <option value="html">HTML (.html)</option>
+                                        <option value="json">JSON 数据 (.json)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">文件名模板</label>
+                                    <input type="text" class="form-input" id="fileNameTemplate" value="{project}_{date}">
+                                    <p class="form-hint">可用变量: {project} 项目名称, {date} 当前日期, {time} 当前时间</p>
+                                </div>
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <h4>包含执行日志</h4>
+                                        <p>导出数据时同时包含任务执行日志</p>
+                                    </div>
+                                    <div class="toggle-switch" id="toggleIncludeLogs"></div>
+                                </div>
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <h4>自动保存备份</h4>
+                                        <p>每次发布文档后自动导出 JSON 备份</p>
+                                    </div>
+                                    <div class="toggle-switch" id="toggleAutoBackup"></div>
+                                </div>
+                                <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+                                    <button class="btn btn-secondary" id="resetExportBtn">重置</button>
+                                    <button class="btn btn-primary" id="saveExportBtn"><i data-lucide="save"></i> 保存设置</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Appearance Settings -->
+                        <div class="settings-panel" id="appearancePanel" style="display:none;">
+                            <div class="settings-panel-header">
+                                <h2><i data-lucide="palette"></i> 外观设置</h2>
+                                <p>自定义界面显示选项</p>
+                            </div>
+                            <div class="settings-panel-body">
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <h4>紧凑模式</h4>
+                                        <p>减小卡片间距，显示更多内容</p>
+                                    </div>
+                                    <div class="toggle-switch" id="toggleCompact"></div>
+                                </div>
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <h4>显示任务编号</h4>
+                                        <p>在看板卡片上显示章节编号</p>
+                                    </div>
+                                    <div class="toggle-switch active" id="toggleShowNumbers"></div>
+                                </div>
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <h4>动画效果</h4>
+                                        <p>启用界面过渡动画和拖拽效果</p>
+                                    </div>
+                                    <div class="toggle-switch active" id="toggleAnimations"></div>
+                                </div>
+                                <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:8px;">
+                                    <button class="btn btn-primary" id="saveAppearanceBtn"><i data-lucide="save"></i> 保存设置</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data Management -->
+                        <div class="settings-panel danger-zone" id="dataPanel" style="display:none;">
+                            <div class="settings-panel-header">
+                                <h2><i data-lucide="alert-triangle"></i> 数据管理</h2>
+                                <p>备份、恢复或清除您的数据</p>
+                            </div>
+                            <div class="settings-panel-body">
+                                <div class="data-actions">
+                                    <button class="btn btn-secondary btn-block" id="exportDataBtn">
+                                        <i data-lucide="download"></i> 导出全部数据
+                                    </button>
+                                    <button class="btn btn-secondary btn-block" id="importDataBtn">
+                                        <i data-lucide="upload"></i> 导入数据
+                                    </button>
+                                </div>
+                                <div style="margin-top:20px;padding:16px;border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);">
+                                    <h4 style="color:var(--accent-red);font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                                        <i data-lucide="trash-2" style="width:16px;height:16px;"></i> 危险区域
+                                    </h4>
+                                    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;">
+                                        清除数据将删除所有任务、Agent 和项目设置，此操作不可撤销。
+                                    </p>
+                                    <button class="btn btn-danger btn-block" id="clearAllBtn">
+                                        <i data-lucide="trash-2"></i> 清除所有数据
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left"><span class="status-indicator online"></span><span>系统就绪</span></div>
+            <div class="footer-center"><span>系统设置</span></div>
+            <div class="footer-right">
+                <a href="index.html" class="footer-btn" title="返回首页"><i data-lucide="home"></i></a>
+            </div>
+        </footer>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+    (function() {
+        const STORAGE_KEY = 'agent_board_state';
+        const SETTINGS_KEY = 'agent_board_settings';
+        function loadState() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
+        }
+        function loadSettings() {
+            try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}; } catch(e) { return {}; }
+        }
+        const state = loadState();
+        const settings = loadSettings();
+
+        // Nav switching
+        document.querySelectorAll('.settings-nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.settings-panel').forEach(p => p.style.display = 'none');
+                item.classList.add('active');
+                document.getElementById(item.dataset.target).style.display = 'block';
+            });
+        });
+
+        // Toggle switches
+        document.querySelectorAll('.toggle-switch').forEach(toggle => {
+            toggle.addEventListener('click', () => toggle.classList.toggle('active'));
+            if (settings[toggle.id] === true) toggle.classList.add('active');
+            if (settings[toggle.id] === false) toggle.classList.remove('active');
+        });
+
+        // Project panel
+        const project = state.project || {};
+        document.getElementById('projectName').value = project.name || '';
+        document.getElementById('projectDesc').value = project.description || '';
+        document.getElementById('projectCreated').value = project.createdAt ? new Date(project.createdAt).toLocaleString() : '--';
+        document.getElementById('projectUpdated').value = project.updatedAt ? new Date(project.updatedAt).toLocaleString() : '--';
+
+        document.getElementById('saveProjectBtn').addEventListener('click', () => {
+            const name = document.getElementById('projectName').value.trim();
+            const desc = document.getElementById('projectDesc').value.trim();
+            if (!name) { showToast('项目名称不能为空', 'error'); return; }
+            state.project = state.project || {};
+            state.project.name = name;
+            state.project.description = desc;
+            state.project.updatedAt = Date.now();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            showToast('项目配置已保存', 'success');
+        });
+        document.getElementById('resetProjectBtn').addEventListener('click', () => {
+            document.getElementById('projectName').value = project.name || '';
+            document.getElementById('projectDesc').value = project.description || '';
+        });
+
+        // Chapters panel
+        const chapterTemplates = [
+            { number: 1, title: '产品概述', agent: '产品经理' },
+            { number: 2, title: '用户角色与需求分析', agent: '产品经理' },
+            { number: 3, title: '系统架构设计', agent: '架构师' },
+            { number: 4, title: '功能模块设计', agent: '架构师' },
+            { number: 5, title: '数据库设计', agent: '开发者' },
+            { number: 6, title: '接口设计', agent: '开发者' },
+            { number: 7, title: '原型设计', agent: '设计师' },
+            { number: 8, title: '非功能性需求', agent: '架构师' },
+            { number: 9, title: '项目规划', agent: '产品经理' }
+        ];
+        document.getElementById('chapterTemplateList').innerHTML = chapterTemplates.map(c => `
+            <div class="chapter-template-item">
+                <div class="num">${c.number}</div>
+                <div class="title">${c.title}</div>
+                <div class="agent-tag">${c.agent}</div>
+            </div>
+        `).join('');
+
+        // Export panel defaults
+        document.getElementById('defaultExportFormat').value = settings.defaultExportFormat || 'md';
+        document.getElementById('fileNameTemplate').value = settings.fileNameTemplate || '{project}_{date}';
+        document.getElementById('saveExportBtn').addEventListener('click', () => {
+            settings.defaultExportFormat = document.getElementById('defaultExportFormat').value;
+            settings.fileNameTemplate = document.getElementById('fileNameTemplate').value;
+            settings.toggleIncludeLogs = document.getElementById('toggleIncludeLogs').classList.contains('active');
+            settings.toggleAutoBackup = document.getElementById('toggleAutoBackup').classList.contains('active');
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+            showToast('导出设置已保存', 'success');
+        });
+        document.getElementById('resetExportBtn').addEventListener('click', () => {
+            document.getElementById('defaultExportFormat').value = 'md';
+            document.getElementById('fileNameTemplate').value = '{project}_{date}';
+            document.getElementById('toggleIncludeLogs').classList.remove('active');
+            document.getElementById('toggleAutoBackup').classList.remove('active');
+        });
+
+        // Appearance
+        document.getElementById('saveAppearanceBtn').addEventListener('click', () => {
+            settings.toggleCompact = document.getElementById('toggleCompact').classList.contains('active');
+            settings.toggleShowNumbers = document.getElementById('toggleShowNumbers').classList.contains('active');
+            settings.toggleAnimations = document.getElementById('toggleAnimations').classList.contains('active');
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+            showToast('外观设置已保存', 'success');
+        });
+
+        // Data management
+        document.getElementById('exportDataBtn').addEventListener('click', () => {
+            const data = { project: state.project, tasks: state.tasks, agents: state.agents, exportedAt: Date.now() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `agent_board_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('数据已导出', 'success');
+        });
+
+        document.getElementById('importDataBtn').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file'; input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    if (data.project && data.tasks) {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                        showToast('数据导入成功，请刷新页面', 'success');
+                    } else { showToast('数据格式无效', 'error'); }
+                } catch(err) { showToast('导入失败: ' + err.message, 'error'); }
+            };
+            input.click();
+        });
+
+        document.getElementById('clearAllBtn').addEventListener('click', () => {
+            if (!confirm('确定要清除所有数据吗？此操作不可撤销！')) return;
+            localStorage.removeItem(STORAGE_KEY);
+            showToast('所有数据已清除', 'success');
+            setTimeout(() => window.location.href = 'index.html', 1000);
+        });
+
+        // Toast
+        function showToast(msg, type='info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            const iconMap = { success:'check-circle', error:'x-circle', warning:'alert-triangle', info:'info' };
+            toast.innerHTML = `<div class="toast-icon"><i data-lucide="${iconMap[type]||'info'}"></i></div><div class="toast-message">${msg}</div>`;
+            container.appendChild(toast);
+            lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+            setTimeout(() => { toast.classList.add('hiding'); setTimeout(() => toast.remove(), 250); }, 3000);
+        }
+
+        lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+    })();
+    </script>
+    <script src="utils.js"></script>
+    <script src="store.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            function syncProject() {
+                const project = Store.getCurrentProject();
+                if (project) {
+                    const nameEl = document.getElementById('currentProjectName');
+                    if (nameEl) nameEl.textContent = project.name;
+                    const bcEl = document.getElementById('breadcrumbProject');
+                    if (bcEl) bcEl.textContent = project.name;
+                }
+            }
+            syncProject();
+            Store.subscribe('currentProjectId', () => {
+                syncProject();
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent管理 - 0xDraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .stats-overview {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-box {
+            background: var(--bg-card); border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg); padding: 20px;
+            text-align: center; transition: all var(--transition-fast);
+        }
+        .stat-box:hover { border-color: var(--accent-blue); }
+        .stat-box .value {
+            font-size: 28px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 4px;
+        }
+        .stat-box .label { font-size: 13px; color: var(--text-secondary); }
+
+        .agent-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+        }
+        .agent-card {
+            background: var(--bg-card); border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg); overflow: hidden;
+            transition: all var(--transition-fast); position: relative;
+        }
+        .agent-card:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
+        .agent-card-top {
+            height: 4px; background: var(--gradient-primary);
+        }
+        .agent-card-body { padding: 24px; }
+        .agent-card-header {
+            display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+        }
+        .agent-card-avatar {
+            width: 56px; height: 56px; border-radius: var(--radius-lg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; flex-shrink: 0;
+        }
+        .agent-card-info { flex: 1; min-width: 0; }
+        .agent-card-name {
+            font-size: 16px; font-weight: 600; margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .agent-card-type {
+            font-size: 12px; color: var(--text-secondary);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .agent-card-status {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 20px;
+            background: var(--bg-secondary); font-size: 12px;
+        }
+        .agent-card-status.online { color: var(--accent-green); }
+        .agent-card-status.busy { color: var(--accent-amber); }
+        .agent-card-status.offline { color: var(--text-muted); }
+        .agent-card-status .dot {
+            width: 6px; height: 6px; border-radius: 50%;
+        }
+        .agent-card-status.online .dot { background: var(--accent-green); }
+        .agent-card-status.busy .dot { background: var(--accent-amber); }
+        .agent-card-status.offline .dot { background: var(--text-muted); }
+
+        .agent-card-desc {
+            font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; margin-bottom: 16px;
+        }
+
+        .agent-card-footer {
+            display: flex; align-items: center; gap: 16px;
+            padding-top: 16px; border-top: 1px solid var(--border-default);
+        }
+        .agent-stat {
+            text-align: center; flex: 1;
+        }
+        .agent-stat .num {
+            font-size: 20px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+        }
+        .agent-stat .lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        .agent-card-actions {
+            display: flex; gap: 8px; margin-top: 16px;
+        }
+        .agent-card-actions .btn { flex: 1; justify-content: center; }
+
+        .empty-agents {
+            text-align: center; padding: 80px 20px; color: var(--text-secondary);
+            grid-column: 1 / -1;
+        }
+        .empty-agents i { width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.4; }
+
+        /* Team Management Layout */
+        .agents-layout { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
+        .team-sidebar { background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; position: sticky; top: 24px; }
+        .team-sidebar-header { padding: 16px 20px; border-bottom: 1px solid var(--border-default); background: var(--bg-secondary); font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .team-list { padding: 8px; }
+        .team-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; border-radius: var(--radius-md); cursor: pointer; transition: all var(--transition-fast); font-size: 14px; color: var(--text-secondary); }
+        .team-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .team-item.active { background: rgba(99,102,241,0.1); color: var(--accent-blue); font-weight: 500; }
+        .team-item-left { display: flex; align-items: center; gap: 10px; }
+        .team-count { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg-secondary); color: var(--text-muted); }
+        .team-item.active .team-count { background: rgba(99,102,241,0.2); color: var(--accent-blue); }
+        .new-team-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 16px); margin: 8px; padding: 10px; border: 1px dashed var(--border-default); border-radius: var(--radius-md); background: none; color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all var(--transition-fast); }
+        .new-team-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); background: rgba(99,102,241,0.05); }
+        .page-header-bar .actions { display: flex; gap: 10px; }
+        .remove-from-team { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: var(--radius-md); border: none; background: var(--bg-secondary); color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all var(--transition-fast); }
+        .agent-card:hover .remove-from-team { opacity: 1; }
+        .remove-from-team:hover { background: rgba(239,68,68,0.1); color: var(--accent-red); }
+
+        @media (max-width: 992px) {
+            .agents-layout { grid-template-columns: 1fr; }
+            .team-sidebar { position: static; }
+            .stats-overview { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .stats-overview { grid-template-columns: repeat(2, 1fr); }
+        }
+            /* Project Selector in Header */
+        .project-selector { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; margin-left: 16px; transition: all var(--transition-fast); }
+        .project-selector:hover { border-color: var(--accent-blue); }
+        .project-selector-info { display: flex; flex-direction: column; }
+        .project-selector-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .project-selector-name { font-size: 13px; font-weight: 600; color: var(--text-primary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .project-selector i { width: 14px; height: 14px; color: var(--text-secondary); }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="logo" style="text-decoration:none;color:inherit;">
+                    <div class="logo-icon"><i data-lucide="bot" class="logo-botsvg"></i></div>
+                    <div class="logo-text">
+                        <span class="logo-title">0xDraft</span>
+                        <span class="logo-subtitle">Multi-Agent Team</span>
+                    </div>
+                </a>
+
+                <div class="project-selector" onclick="window.location.href='index.html'">
+                    <div class="project-selector-info">
+                        <span class="project-selector-label">当前项目</span>
+                        <span class="project-selector-name" id="currentProjectName">载入中...</span>
+                    </div>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+
+                <nav class="page-nav">
+                    <a href="index.html" class="page-nav-item"><i data-lucide="layout-dashboard"></i> 首页</a>
+                    <a href="analysis.html" class="page-nav-item"><i data-lucide="lightbulb"></i> 分析</a>
+                    <a href="kanban.html" class="page-nav-item"><i data-lucide="layout-grid"></i> 看板</a>
+                    <a href="agents.html" class="page-nav-item active"><i data-lucide="users"></i> Agent</a>
+                    <a href="preview.html" class="page-nav-item"><i data-lucide="file-text"></i> 预览</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" title="通知"><i data-lucide="bell"></i><span class="badge">3</span></button>
+                <div class="user-avatar"><span>U</span></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="page-container">
+                <nav class="breadcrumb">
+                    <a href="index.html"><i data-lucide="home"></i> 首页</a>
+                    <i data-lucide="chevron-right"></i>
+                    <span id="breadcrumbProject">项目名</span>
+                    <i data-lucide="chevron-right"></i>
+                    <span>Agent管理</span>
+                </nav>
+
+                <div class="agents-layout">
+                    <aside class="team-sidebar">
+                        <div class="team-sidebar-header">
+                            <i data-lucide="users" style="width:16px;height:16px;color:var(--accent-blue);"></i>
+                            团队列表
+                        </div>
+                        <div class="team-list" id="teamList">
+                            <!-- Teams rendered by JS -->
+                        </div>
+                        <button class="new-team-btn" id="newTeamBtn">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                            新建团队
+                        </button>
+                    </aside>
+
+                    <div class="agents-main">
+                        <div class="page-header-bar">
+                            <div>
+                                <h1 id="teamTitle"><i data-lucide="users"></i> Agent管理</h1>
+                                <p id="teamSubtitle">管理您的AI Agent团队，查看任务分配和状态</p>
+                            </div>
+                            <div class="actions">
+                                <button class="btn btn-secondary" id="addExistingBtn" style="display:none;">
+                                    <i data-lucide="user-plus"></i> 添加现有Agent
+                                </button>
+                                <button class="btn btn-primary" id="addAgentBtn">
+                                    <i data-lucide="plus"></i> 添加Agent
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="stats-overview" id="statsOverview">
+                            <div class="stat-box">
+                                <div class="value" id="totalAgents" style="color:var(--accent-blue);">0</div>
+                                <div class="label">总Agent数</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value" id="onlineAgents" style="color:var(--accent-green);">0</div>
+                                <div class="label">在线</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value" id="busyAgents" style="color:var(--accent-amber);">0</div>
+                                <div class="label">忙碌</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="value" id="totalTasks" style="color:var(--accent-cyan);">0</div>
+                                <div class="label">总任务</div>
+                            </div>
+                        </div>
+
+                        <div class="agent-grid" id="agentGrid">
+                            <!-- Agent cards generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left">
+                <span class="status-indicator online"></span>
+                <span>系统就绪</span>
+            </div>
+            <div class="footer-center">
+                <span id="lastUpdate">最后更新: --</span>
+            </div>
+            <div class="footer-right">
+                <a href="settings.html" class="footer-btn" title="系统设置">
+                    <i data-lucide="settings"></i>
+                </a>
+                <button class="footer-btn" id="clearDataBtn" title="清除所有数据">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Add Agent Modal -->
+    <div class="modal-overlay" id="agentModalOverlay">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="user-plus"></i> 添加Agent</h3>
+                <button class="modal-close" id="closeAgentModal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Agent 名称</label>
+                    <input type="text" class="form-input" id="newAgentName" placeholder="例如：架构师小智">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">类型</label>
+                    <select class="form-select" id="newAgentType">
+                        <option value="architect">架构师</option>
+                        <option value="pm">产品经理</option>
+                        <option value="designer">设计师</option>
+                        <option value="developer">开发者</option>
+                        <option value="writer">技术写作</option>
+                        <option value="reviewer">评审</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">专长描述</label>
+                    <textarea class="form-textarea" id="newAgentSpecialty" placeholder="描述该Agent的专长领域..." style="min-height: 80px;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">头像颜色</label>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <input type="color" id="newAgentColor" value="#6366f1" style="width:48px;height:36px;border:none;border-radius:var(--radius-md);cursor:pointer;background:none;">
+                        <span style="font-size:13px;color:var(--text-secondary);">选择代表色</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">初始状态</label>
+                    <select class="form-select" id="newAgentStatus">
+                        <option value="online">在线</option>
+                        <option value="busy">忙碌</option>
+                        <option value="offline">离线</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelAgentBtn">取消</button>
+                <button class="btn btn-primary" id="saveAgentBtn"><i data-lucide="check"></i> 添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Team Modal -->
+    <div class="modal-overlay" id="teamModalOverlay">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="users"></i> 新建团队</h3>
+                <button class="modal-close" id="closeTeamModal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">团队名称</label>
+                    <input type="text" class="form-input" id="newTeamName" placeholder="例如：前端开发组">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelTeamBtn">取消</button>
+                <button class="btn btn-primary" id="saveTeamBtn"><i data-lucide="check"></i> 创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Existing Agent Modal -->
+    <div class="modal-overlay" id="existingAgentModalOverlay">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="user-plus"></i> 添加现有Agent到团队</h3>
+                <button class="modal-close" id="closeExistingAgentModal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">选择Agent</label>
+                    <div id="existingAgentList" style="max-height: 320px; overflow-y: auto;">
+                        <!-- Existing agents rendered by JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelExistingAgentBtn">取消</button>
+                <button class="btn btn-primary" id="saveExistingAgentBtn"><i data-lucide="check"></i> 添加选中</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const typeNames = { architect:'架构师', pm:'产品经理', designer:'设计师', developer:'开发者', writer:'技术写作', reviewer:'评审' };
+        const typeIcons = { architect:'layout', pm:'clipboard-list', designer:'palette', developer:'code', writer:'file-text', reviewer:'check-circle' };
+        const statusLabels = { online:'在线', busy:'忙碌', offline:'离线' };
+    </script>
+    <script src="utils.js"></script>
+    <script src="store.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Project sync
+            function syncProject() {
+                const project = Store.getCurrentProject();
+                if (project) {
+                    const nameEl = document.getElementById('currentProjectName');
+                    if (nameEl) nameEl.textContent = project.name;
+                    const bcEl = document.getElementById('breadcrumbProject');
+                    if (bcEl) bcEl.textContent = project.name;
+                }
+            }
+            syncProject();
+            Store.subscribe('currentProjectId', () => {
+                syncProject();
+                renderAll();
+            });
+
+            let currentTeamId = null; // null = all agents
+
+            function getTeams() {
+                return Store.state.agentGroups || [];
+            }
+
+            function getAgentsForTeam(teamId) {
+                const allAgents = Store.getAgents();
+                if (!teamId) return allAgents;
+                const team = getTeams().find(g => g.id === teamId);
+                if (!team) return [];
+                return allAgents.filter(a => team.agentIds.includes(a.id));
+            }
+
+            function renderTeams() {
+                const teams = getTeams();
+                const allAgents = Store.getAgents();
+                const list = document.getElementById('teamList');
+
+                // All agents item
+                const allCount = allAgents.length;
+                let html = `
+                    <div class="team-item ${currentTeamId === null ? 'active' : ''}" data-team-id="">
+                        <div class="team-item-left">
+                            <i data-lucide="users" style="width:14px;height:14px;"></i>
+                            <span>全部 Agent</span>
+                        </div>
+                        <span class="team-count">${allCount}</span>
+                    </div>
+                `;
+
+                teams.forEach(team => {
+                    const count = team.agentIds.length;
+                    html += `
+                        <div class="team-item ${currentTeamId === team.id ? 'active' : ''}" data-team-id="${team.id}">
+                            <div class="team-item-left">
+                                <i data-lucide="shield" style="width:14px;height:14px;"></i>
+                                <span>${team.name}</span>
+                            </div>
+                            <span class="team-count">${count}</span>
+                        </div>
+                    `;
+                });
+
+                list.innerHTML = html;
+
+                // Bind clicks
+                list.querySelectorAll('.team-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        currentTeamId = item.dataset.teamId || null;
+                        renderAll();
+                    });
+                });
+
+                lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+            }
+
+            function renderAgentCard(a, showRemove) {
+                const tasks = Store.getTasks();
+                const agentTasks = tasks.filter(t => t.assignedAgentId === a.id);
+                const doneTasks = agentTasks.filter(t => t.status === 'done' || t.status === 'published');
+                const progress = agentTasks.length ? Math.round((doneTasks.length / agentTasks.length) * 100) : 0;
+                const removeBtn = showRemove ? `<button class="remove-from-team" data-agent-id="${a.id}" title="从团队移除"><i data-lucide="x" style="width:14px;height:14px;"></i></button>` : '';
+                return `
+                    <div class="agent-card">
+                        ${removeBtn}
+                        <div class="agent-card-top"></div>
+                        <div class="agent-card-body">
+                            <div class="agent-card-header">
+                                <div class="agent-card-avatar" style="background:${a.avatarColor};">
+                                    <i data-lucide="${typeIcons[a.type]||'user'}" style="width:26px;height:26px;"></i>
+                                </div>
+                                <div class="agent-card-info">
+                                    <div class="agent-card-name">${a.name}</div>
+                                    <div class="agent-card-type">
+                                        <i data-lucide="briefcase" style="width:12px;height:12px;"></i>
+                                        ${typeNames[a.type]||a.type}
+                                    </div>
+                                </div>
+                                <div class="agent-card-status ${a.status}">
+                                    <span class="dot"></span>
+                                    ${statusLabels[a.status]}
+                                </div>
+                            </div>
+                            <p class="agent-card-desc">${a.specialty}</p>
+                            <div class="agent-card-footer">
+                                <div class="agent-stat">
+                                    <div class="num" style="color:var(--accent-cyan);">${agentTasks.length}</div>
+                                    <div class="lbl">任务</div>
+                                </div>
+                                <div class="agent-stat">
+                                    <div class="num" style="color:var(--accent-green);">${doneTasks.length}</div>
+                                    <div class="lbl">完成</div>
+                                </div>
+                                <div class="agent-stat">
+                                    <div class="num" style="color:var(--accent-purple);">${progress}%</div>
+                                    <div class="lbl">进度</div>
+                                </div>
+                            </div>
+                            <div class="agent-card-actions">
+                                <a href="agent-detail.html?id=${a.id}" class="btn btn-secondary btn-sm" style="flex:1;justify-content:center;">
+                                    <i data-lucide="user"></i> 详情
+                                </a>
+                                <a href="task-detail.html" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;" onclick="event.stopPropagation();">
+                                    <i data-lucide="list"></i> 任务
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function renderAgents() {
+                const agents = getAgentsForTeam(currentTeamId);
+                const grid = document.getElementById('agentGrid');
+                const showRemove = currentTeamId !== null;
+
+                if (!agents.length) {
+                    const msg = currentTeamId ? '该团队暂无Agent' : '暂无Agent';
+                    const hint = currentTeamId ? '点击右上角添加Agent到团队' : '点击右上角添加您的第一个AI Agent';
+                    grid.innerHTML = `
+                        <div class="empty-agents">
+                            <i data-lucide="users"></i>
+                            <h3 style="margin-bottom:8px;">${msg}</h3>
+                            <p>${hint}</p>
+                        </div>`;
+                } else {
+                    grid.innerHTML = agents.map(a => renderAgentCard(a, showRemove)).join('');
+                }
+
+                // Bind remove buttons
+                if (showRemove) {
+                    grid.querySelectorAll('.remove-from-team').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const agentId = btn.dataset.agentId;
+                            const team = getTeams().find(g => g.id === currentTeamId);
+                            if (team) {
+                                team.agentIds = team.agentIds.filter(id => id !== agentId);
+                                Store.save();
+                                Store.notify('agents');
+                                renderAll();
+                            }
+                        });
+                    });
+                }
+
+                // Update title
+                const teamTitle = document.getElementById('teamTitle');
+                const teamSubtitle = document.getElementById('teamSubtitle');
+                if (currentTeamId) {
+                    const team = getTeams().find(g => g.id === currentTeamId);
+                    teamTitle.innerHTML = `<i data-lucide="shield"></i> ${team ? team.name : '团队'}`;
+                    teamSubtitle.textContent = '管理该团队的Agent成员';
+                } else {
+                    teamTitle.innerHTML = `<i data-lucide="users"></i> Agent管理`;
+                    teamSubtitle.textContent = '管理您的AI Agent团队，查看任务分配和状态';
+                }
+
+                // Show/hide add existing button
+                const addExistingBtn = document.getElementById('addExistingBtn');
+                addExistingBtn.style.display = currentTeamId ? 'inline-flex' : 'none';
+
+                lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+            }
+
+            function renderStats() {
+                const agents = getAgentsForTeam(currentTeamId);
+                const tasks = Store.getTasks();
+                document.getElementById('totalAgents').textContent = agents.length;
+                document.getElementById('onlineAgents').textContent = agents.filter(a => a.status === 'online').length;
+                document.getElementById('busyAgents').textContent = agents.filter(a => a.status === 'busy').length;
+                document.getElementById('totalTasks').textContent = tasks.length;
+            }
+
+            function renderAll() {
+                renderTeams();
+                renderStats();
+                renderAgents();
+            }
+
+            renderAll();
+
+            // ==================== Add Agent Modal ====================
+            const agentModalOverlay = document.getElementById('agentModalOverlay');
+            const addAgentBtn = document.getElementById('addAgentBtn');
+            const closeAgentModal = document.getElementById('closeAgentModal');
+            const cancelAgentBtn = document.getElementById('cancelAgentBtn');
+            const saveAgentBtn = document.getElementById('saveAgentBtn');
+
+            function openAgentModal() {
+                agentModalOverlay.classList.add('active');
+                document.getElementById('newAgentName').focus();
+            }
+            function closeAgentModalFn() {
+                agentModalOverlay.classList.remove('active');
+                document.getElementById('newAgentName').value = '';
+                document.getElementById('newAgentSpecialty').value = '';
+                document.getElementById('newAgentType').value = 'architect';
+                document.getElementById('newAgentColor').value = '#6366f1';
+                document.getElementById('newAgentStatus').value = 'online';
+            }
+
+            addAgentBtn.addEventListener('click', openAgentModal);
+            closeAgentModal.addEventListener('click', closeAgentModalFn);
+            cancelAgentBtn.addEventListener('click', closeAgentModalFn);
+            agentModalOverlay.addEventListener('click', (e) => {
+                if (e.target === agentModalOverlay) closeAgentModalFn();
+            });
+
+            saveAgentBtn.addEventListener('click', () => {
+                const name = document.getElementById('newAgentName').value.trim();
+                const type = document.getElementById('newAgentType').value;
+                const specialty = document.getElementById('newAgentSpecialty').value.trim();
+                const color = document.getElementById('newAgentColor').value;
+                const status = document.getElementById('newAgentStatus').value;
+
+                if (!name) {
+                    alert('请输入Agent名称');
+                    return;
+                }
+
+                const newAgent = {
+                    id: 'agent_' + Date.now(),
+                    name: name,
+                    type: type,
+                    specialty: specialty || '专业AI Agent',
+                    avatarColor: color,
+                    status: status,
+                    taskCount: 0
+                };
+
+                Store.state.agents.push(newAgent);
+                Store.save();
+                Store.notify('agents');
+
+                // Add to current team if a team is selected
+                if (currentTeamId) {
+                    const team = getTeams().find(g => g.id === currentTeamId);
+                    if (team) {
+                        team.agentIds.push(newAgent.id);
+                        Store.save();
+                    }
+                } else {
+                    // Add to current project's agent group if no team selected
+                    const project = Store.getCurrentProject();
+                    if (project) {
+                        const group = Store.state.agentGroups.find(g => g.id === project.groupId);
+                        if (group) {
+                            group.agentIds.push(newAgent.id);
+                            Store.save();
+                        }
+                    }
+                }
+
+                closeAgentModalFn();
+                renderAll();
+            });
+
+            // ==================== New Team Modal ====================
+            const teamModalOverlay = document.getElementById('teamModalOverlay');
+            const newTeamBtn = document.getElementById('newTeamBtn');
+            const closeTeamModal = document.getElementById('closeTeamModal');
+            const cancelTeamBtn = document.getElementById('cancelTeamBtn');
+            const saveTeamBtn = document.getElementById('saveTeamBtn');
+
+            function openTeamModal() {
+                teamModalOverlay.classList.add('active');
+                document.getElementById('newTeamName').focus();
+            }
+            function closeTeamModalFn() {
+                teamModalOverlay.classList.remove('active');
+                document.getElementById('newTeamName').value = '';
+            }
+
+            newTeamBtn.addEventListener('click', openTeamModal);
+            closeTeamModal.addEventListener('click', closeTeamModalFn);
+            cancelTeamBtn.addEventListener('click', closeTeamModalFn);
+            teamModalOverlay.addEventListener('click', (e) => {
+                if (e.target === teamModalOverlay) closeTeamModalFn();
+            });
+
+            saveTeamBtn.addEventListener('click', () => {
+                const name = document.getElementById('newTeamName').value.trim();
+                if (!name) {
+                    alert('请输入团队名称');
+                    return;
+                }
+
+                const newGroup = {
+                    id: 'group_' + Date.now(),
+                    name: name,
+                    agentIds: []
+                };
+
+                Store.state.agentGroups.push(newGroup);
+                Store.save();
+                Store.notify('agents');
+
+                closeTeamModalFn();
+                currentTeamId = newGroup.id;
+                renderAll();
+            });
+
+            // ==================== Add Existing Agent Modal ====================
+            const existingAgentModalOverlay = document.getElementById('existingAgentModalOverlay');
+            const addExistingBtn = document.getElementById('addExistingBtn');
+            const closeExistingAgentModal = document.getElementById('closeExistingAgentModal');
+            const cancelExistingAgentBtn = document.getElementById('cancelExistingAgentBtn');
+            const saveExistingAgentBtn = document.getElementById('saveExistingAgentBtn');
+
+            function openExistingAgentModal() {
+                const allAgents = Store.getAgents();
+                const team = getTeams().find(g => g.id === currentTeamId);
+                if (!team) return;
+
+                const existingIds = new Set(team.agentIds);
+                const availableAgents = allAgents.filter(a => !existingIds.has(a.id));
+
+                const list = document.getElementById('existingAgentList');
+                if (!availableAgents.length) {
+                    list.innerHTML = '<p style="text-align:center;color:var(--text-secondary);padding:20px;">没有可添加的Agent</p>';
+                } else {
+                    list.innerHTML = availableAgents.map(a => `
+                        <label style="display:flex;align-items:center;gap:12px;padding:10px;border-radius:var(--radius-md);cursor:pointer;transition:all var(--transition-fast);border:1px solid transparent;" onmouseover="this.style.background='var(--bg-card-hover)'" onmouseout="this.style.background='transparent'" onmousedown="this.style.borderColor='var(--accent-blue)'" onmouseup="this.style.borderColor='transparent'">
+                            <input type="checkbox" value="${a.id}" style="width:16px;height:16px;cursor:pointer;">
+                            <div class="agent-card-avatar" style="background:${a.avatarColor};width:32px;height:32px;font-size:14px;flex-shrink:0;">
+                                <i data-lucide="${typeIcons[a.type]||'user'}" style="width:16px;height:16px;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:14px;font-weight:500;">${a.name}</div>
+                                <div style="font-size:12px;color:var(--text-secondary);">${typeNames[a.type]||a.type}</div>
+                            </div>
+                        </label>
+                    `).join('');
+                    lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+                }
+
+                existingAgentModalOverlay.classList.add('active');
+            }
+
+            function closeExistingAgentModalFn() {
+                existingAgentModalOverlay.classList.remove('active');
+            }
+
+            addExistingBtn.addEventListener('click', openExistingAgentModal);
+            closeExistingAgentModal.addEventListener('click', closeExistingAgentModalFn);
+            cancelExistingAgentBtn.addEventListener('click', closeExistingAgentModalFn);
+            existingAgentModalOverlay.addEventListener('click', (e) => {
+                if (e.target === existingAgentModalOverlay) closeExistingAgentModalFn();
+            });
+
+            saveExistingAgentBtn.addEventListener('click', () => {
+                const team = getTeams().find(g => g.id === currentTeamId);
+                if (!team) return;
+
+                const checkboxes = document.querySelectorAll('#existingAgentList input[type="checkbox"]:checked');
+                checkboxes.forEach(cb => {
+                    if (!team.agentIds.includes(cb.value)) {
+                        team.agentIds.push(cb.value);
+                    }
+                });
+
+                Store.save();
+                Store.notify('agents');
+                closeExistingAgentModalFn();
+                renderAll();
+            });
+        });
+    </script>
+
+</body>
+</html>

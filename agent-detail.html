@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 详情 - 0xDraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .breadcrumb {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;
+        }
+        .breadcrumb a { color: var(--accent-blue); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
+        .breadcrumb i { width: 14px; height: 14px; }
+
+        .agent-hero {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 24px;
+            display: flex; align-items: center; gap: 28px;
+            position: relative; overflow: hidden;
+        }
+        .agent-hero::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+            background: var(--gradient-primary);
+        }
+        .agent-hero-avatar {
+            width: 96px; height: 96px; border-radius: var(--radius-lg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px; font-weight: 700; color: white; flex-shrink: 0;
+            box-shadow: var(--shadow-md);
+        }
+        .agent-hero-info { flex: 1; }
+        .agent-hero-info h1 {
+            font-family: 'Space Grotesk', sans-serif; font-size: 32px;
+            margin-bottom: 6px; display: flex; align-items: center; gap: 12px;
+        }
+        .agent-hero-info .agent-role {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;
+        }
+        .agent-hero-info .agent-desc {
+            font-size: 15px; color: var(--text-secondary); line-height: 1.6;
+            max-width: 600px;
+        }
+        .agent-hero-status {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 14px; background: var(--bg-secondary);
+            border-radius: 20px; font-size: 13px; font-weight: 500;
+        }
+        .agent-hero-status.online { color: var(--accent-green); }
+        .agent-hero-status.busy { color: var(--accent-amber); }
+        .agent-hero-status.offline { color: var(--text-muted); }
+        .agent-hero-status .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .agent-hero-status.online .status-dot { background: var(--accent-green); }
+        .agent-hero-status.busy .status-dot { background: var(--accent-amber); }
+        .agent-hero-status.offline .status-dot { background: var(--text-muted); }
+
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            padding: 20px; text-align: center;
+            transition: all var(--transition-fast);
+        }
+        .stat-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+        }
+        .stat-card .value {
+            font-size: 32px; font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-card .label {
+            font-size: 13px; color: var(--text-secondary); margin-top: 4px;
+        }
+
+        .detail-grid {
+            display: grid; grid-template-columns: 1fr 360px; gap: 24px;
+        }
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border-default);
+            background: var(--bg-secondary);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .panel-header h3 {
+            font-size: 15px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .panel-header h3 i { width: 18px; height: 18px; color: var(--accent-blue); }
+        .panel-body { padding: 16px; }
+
+        .task-table { width: 100%; border-collapse: collapse; }
+        .task-table th {
+            text-align: left; padding: 10px 12px;
+            font-size: 12px; text-transform: uppercase;
+            color: var(--text-muted); font-weight: 500;
+            letter-spacing: 0.3px; border-bottom: 1px solid var(--border-default);
+        }
+        .task-table td {
+            padding: 12px; border-bottom: 1px solid var(--border-default);
+            font-size: 14px; color: var(--text-secondary);
+        }
+        .task-table tr:last-child td { border-bottom: none; }
+        .task-table tr:hover td { background: var(--bg-secondary); color: var(--text-primary); }
+        .task-table a { color: var(--text-primary); text-decoration: none; }
+        .task-table a:hover { color: var(--accent-blue); text-decoration: underline; }
+        .task-table .priority { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+        .priority.P0 { background: rgba(239,68,68,0.2); color: var(--accent-red); }
+        .priority.P1 { background: rgba(245,158,11,0.2); color: var(--accent-amber); }
+        .priority.P2 { background: rgba(34,211,238,0.2); color: var(--accent-cyan); }
+
+        .skill-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .skill-tag {
+            padding: 6px 14px; background: rgba(99,102,241,0.1);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 20px; font-size: 13px; color: var(--accent-blue);
+        }
+
+        .activity-list { display: flex; flex-direction: column; gap: 14px; }
+        .activity-item {
+            display: flex; align-items: flex-start; gap: 12px;
+            padding-bottom: 14px; border-bottom: 1px solid var(--border-default);
+        }
+        .activity-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .activity-icon {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--bg-secondary);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .activity-icon i { width: 14px; height: 14px; }
+        .activity-content { flex: 1; }
+        .activity-content .text { font-size: 14px; color: var(--text-primary); line-height: 1.5; }
+        .activity-content .text a { color: var(--accent-blue); text-decoration: none; }
+        .activity-content .text a:hover { text-decoration: underline; }
+        .activity-content .time { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+        .empty-state-sm {
+            text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px;
+        }
+        .empty-state-sm i { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5; }
+
+        @media (max-width: 992px) {
+            .agent-hero { flex-direction: column; text-align: center; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+            /* Project Selector in Header */
+        .project-selector { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; margin-left: 16px; transition: all var(--transition-fast); }
+        .project-selector:hover { border-color: var(--accent-blue); }
+        .project-selector-info { display: flex; flex-direction: column; }
+        .project-selector-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .project-selector-name { font-size: 13px; font-weight: 600; color: var(--text-primary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .project-selector i { width: 14px; height: 14px; color: var(--text-secondary); }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="logo" style="text-decoration:none;color:inherit;">
+                    <div class="logo-icon"><i data-lucide="bot" class="logo-botsvg"></i></div>
+                    <div class="logo-text">
+                        <span class="logo-title">0xDraft</span>
+                        <span class="logo-subtitle">Multi-Agent Team</span>
+                    </div>
+                </a>
+
+                <div class="project-selector" onclick="window.location.href='index.html'">
+                    <div class="project-selector-info">
+                        <span class="project-selector-label">当前项目</span>
+                        <span class="project-selector-name" id="currentProjectName">载入中...</span>
+                    </div>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+
+                <nav class="page-nav">
+                    <a href="index.html" class="page-nav-item"><i data-lucide="layout-dashboard"></i> 首页</a>
+                    <a href="analysis.html" class="page-nav-item"><i data-lucide="lightbulb"></i> 分析</a>
+                    <a href="kanban.html" class="page-nav-item"><i data-lucide="layout-grid"></i> 看板</a>
+                    <a href="agents.html" class="page-nav-item active"><i data-lucide="users"></i> Agent</a>
+                    <a href="preview.html" class="page-nav-item"><i data-lucide="file-text"></i> 预览</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" title="通知"><i data-lucide="bell"></i><span class="badge">3</span></button>
+                <div class="user-avatar"><span>U</span></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="page-container">
+                <nav class="breadcrumb">
+                    <a href="index.html"><i data-lucide="home"></i> 首页</a>
+                    <i data-lucide="chevron-right"></i>
+                    <a href="agents.html">Agent管理</a>
+                    <i data-lucide="chevron-right"></i>
+                    <span id="breadcrumbAgentName">Agent 详情</span>
+                </nav>
+
+                <div class="agent-hero" id="agentHero">
+                    <div class="agent-hero-avatar" id="heroAvatar" style="background:#555577">?</div>
+                    <div class="agent-hero-info">
+                        <h1><span id="heroName">加载中...</span></h1>
+                        <div class="agent-role" id="heroRole"><i data-lucide="briefcase"></i> <span>--</span></div>
+                        <div class="agent-desc" id="heroDesc">--</div>
+                    </div>
+                    <div class="agent-hero-status" id="heroStatus"><span class="status-dot"></span> <span>--</span></div>
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="value" id="statTotal">0</div>
+                        <div class="label">总任务</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="statInProgress">0</div>
+                        <div class="label">进行中</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="statDone">0</div>
+                        <div class="label">已完成</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="statPublished">0</div>
+                        <div class="label">已发布</div>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="main-panels">
+                        <div class="panel" style="margin-bottom:24px;">
+                            <div class="panel-header">
+                                <h3><i data-lucide="layout-grid"></i> 负责的任务</h3>
+                                <a href="kanban.html" class="btn btn-secondary btn-sm">去看板</a>
+                            </div>
+                            <div class="panel-body" style="padding:0;">
+                                <table class="task-table" id="taskTable">
+                                    <thead>
+                                        <tr>
+                                            <th>编号</th>
+                                            <th>标题</th>
+                                            <th>优先级</th>
+                                            <th>状态</th>
+                                            <th>进度</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="taskTableBody">
+                                        <!-- filled dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3><i data-lucide="activity"></i> 最近动态</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="activity-list" id="activityList">
+                                    <!-- filled dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <aside class="side-panels">
+                        <div class="panel" style="margin-bottom:24px;">
+                            <div class="panel-header">
+                                <h3><i data-lucide="zap"></i> 专长技能</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div class="skill-tags" id="skillTags">
+                                    <!-- filled dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3><i data-lucide="link"></i> 关联链接</h3>
+                            </div>
+                            <div class="panel-body">
+                                <div style="display:flex;flex-direction:column;gap:10px;">
+                                    <a href="kanban.html" class="btn btn-secondary" style="justify-content:flex-start;">
+                                        <i data-lucide="layout-grid"></i> 看板视图
+                                    </a>
+                                    <a href="analysis.html" class="btn btn-secondary" style="justify-content:flex-start;">
+                                        <i data-lucide="lightbulb"></i> 需求分析
+                                    </a>
+                                    <a href="preview.html" class="btn btn-secondary" style="justify-content:flex-start;">
+                                        <i data-lucide="file-text"></i> 文档预览
+                                    </a>
+                                    <a href="settings.html" class="btn btn-secondary" style="justify-content:flex-start;">
+                                        <i data-lucide="settings"></i> 系统设置
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left"><span class="status-indicator online"></span><span>系统就绪</span></div>
+            <div class="footer-center"><span>Agent 详情页</span></div>
+            <div class="footer-right">
+                <a href="index.html" class="footer-btn" title="返回首页"><i data-lucide="home"></i></a>
+                <a href="settings.html" class="footer-btn" title="设置"><i data-lucide="settings"></i></a>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+    (function() {
+        const STORAGE_KEY = 'agent_board_state';
+        function loadState() {
+            try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) { return {}; }
+        }
+        const state = loadState();
+        const tasks = state.tasks || [];
+        const agents = state.agents || [];
+        const logs = state.logs || [];
+
+        const params = new URLSearchParams(location.search);
+        const agentId = params.get('id');
+        const agent = agents.find(a => a.id === agentId);
+
+        if (!agent) {
+            // No ID provided or agent not found - show agent list
+            const agentList = agents;
+            const typeNames = { architect:'架构师', pm:'产品经理', designer:'设计师', developer:'开发者', writer:'技术写作', reviewer:'评审' };
+            const typeIcons = { architect:'layout', pm:'clipboard-list', designer:'palette', developer:'code', writer:'file-text', reviewer:'check-circle' };
+            document.querySelector('.page-container').innerHTML = `
+                <nav class="breadcrumb">
+                    <a href="index.html"><i data-lucide="home"></i> 首页</a>
+                    <i data-lucide="chevron-right"></i>
+                    <span id="breadcrumbProject">项目名</span>
+                    <i data-lucide="chevron-right"></i>
+                    <span>全部 Agent</span>
+                </nav>
+                <div class="agent-hero" style="margin-bottom:24px;">
+                    <div class="agent-hero-info">
+                        <h1><i data-lucide="users"></i> 全部 Agent</h1>
+                        <p style="color:var(--text-secondary);margin-top:4px;">共 ${agentList.length} 位 Agent</p>
+                    </div>
+                    <a href="agents.html" class="btn btn-secondary"><i data-lucide="arrow-left"></i> 返回Agent管理</a>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px;">
+                    ${agentList.map(a => `
+                        <a href="agent-detail.html?id=${a.id}" style="text-decoration:none;color:inherit;">
+                            <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:20px;transition:all 150ms;" onmouseover="this.style.borderColor='var(--accent-blue)'" onmouseout="this.style.borderColor='var(--border-default)'">
+                                <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+                                    <div style="width:48px;height:48px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:white;background:${a.avatarColor};">
+                                        <i data-lucide="${typeIcons[a.type]||'user'}" style="width:22px;height:22px;"></i>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div style="font-size:16px;font-weight:600;">${a.name}</div>
+                                        <div style="font-size:12px;color:var(--text-secondary);">${typeNames[a.type]||a.type}</div>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg-secondary);border-radius:20px;font-size:12px;color:${a.status==='online'?'var(--accent-green)':a.status==='busy'?'var(--accent-amber)':'var(--text-muted)'};">
+                                        <span style="width:6px;height:6px;border-radius:50%;background:${a.status==='online'?'var(--accent-green)':a.status==='busy'?'var(--accent-amber)':'var(--text-muted)'};"></span>
+                                        ${a.status==='online'?'在线':a.status==='busy'?'忙碌':'离线'}
+                                    </div>
+                                </div>
+                                <p style="font-size:13px;color:var(--text-secondary);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${a.specialty}</p>
+                                <div style="display:flex;gap:16px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-default);">
+                                    <div style="text-align:center;flex:1;">
+                                        <div style="font-size:18px;font-weight:700;color:var(--accent-cyan);">${tasks.filter(t => t.assignedAgentId === a.id).length}</div>
+                                        <div style="font-size:11px;color:var(--text-muted);">任务数</div>
+                                    </div>
+                                    <div style="text-align:center;flex:1;">
+                                        <div style="font-size:18px;font-weight:700;color:var(--accent-purple);">${tasks.filter(t => t.assignedAgentId === a.id && t.status === 'done').length}</div>
+                                        <div style="font-size:11px;color:var(--text-muted);">已完成</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    `).join('')}
+                </div>
+            `;
+            lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+            return;
+        }
+
+        // Hero
+        document.getElementById('breadcrumbAgentName').textContent = agent.name;
+        document.getElementById('heroAvatar').style.background = agent.avatarColor;
+        document.getElementById('heroAvatar').textContent = agent.name.charAt(0);
+        document.getElementById('heroName').textContent = agent.name;
+        const typeNames = { architect:'架构师', pm:'产品经理', designer:'设计师', developer:'开发者', writer:'技术写作', reviewer:'评审' };
+        const typeIcons = { architect:'layout', pm:'clipboard-list', designer:'palette', developer:'code', writer:'file-text', reviewer:'check-circle' };
+        document.getElementById('heroRole').innerHTML = `<i data-lucide="${typeIcons[agent.type]||'user'}"></i> <span>${typeNames[agent.type] || agent.type}</span>`;
+        document.getElementById('heroDesc').textContent = agent.specialty;
+        const statusEl = document.getElementById('heroStatus');
+        statusEl.className = 'agent-hero-status ' + agent.status;
+        statusEl.innerHTML = `<span class="status-dot"></span> <span>${agent.status==='online'?'在线':agent.status==='busy'?'忙碌':'离线'}</span>`;
+
+        // Stats
+        const agentTasks = tasks.filter(t => t.assignedAgentId === agentId);
+        document.getElementById('statTotal').textContent = agentTasks.length;
+        document.getElementById('statInProgress').textContent = agentTasks.filter(t => t.status === 'in_progress').length;
+        document.getElementById('statDone').textContent = agentTasks.filter(t => t.status === 'done').length;
+        document.getElementById('statPublished').textContent = agentTasks.filter(t => t.status === 'published').length;
+
+        // Task table
+        const tbody = document.getElementById('taskTableBody');
+        const statusMap = { backlog:'待认领', in_progress:'进行中', review:'待审视', done:'已完成', published:'已发布' };
+        if (agentTasks.length) {
+            tbody.innerHTML = agentTasks.sort((a,b) => a.chapterNumber - b.chapterNumber).map(t => `
+                <tr>
+                    <td><a href="task-detail.html?id=${t.id}">${t.chapterNumber}</a></td>
+                    <td><a href="task-detail.html?id=${t.id}">${t.title}</a></td>
+                    <td><span class="priority ${t.priority}">${t.priority}</span></td>
+                    <td>${statusMap[t.status]}</td>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <div style="flex:1;height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden;">
+                                <div style="width:${t.progress}%;height:100%;background:var(--gradient-primary);border-radius:2px;transition:width 300ms;"></div>
+                            </div>
+                            <span style="font-size:12px;color:var(--text-muted);min-width:32px;">${t.progress}%</span>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state-sm"><i data-lucide="inbox"></i><p>暂无分配的任务</p></div></td></tr>`;
+        }
+
+        // Skills
+        const skills = agent.specialty.split(/[，、,.]+/).map(s => s.trim()).filter(s => s.length > 1 && s.length < 15);
+        document.getElementById('skillTags').innerHTML = skills.length
+            ? skills.map(s => `<span class="skill-tag">${s}</span>`).join('')
+            : '<p style="font-size:13px;color:var(--text-muted);">暂无技能标签</p>';
+
+        // Activities
+        const agentLogs = logs.filter(l => l.agentId === agentId).slice(-10).reverse();
+        const activityList = document.getElementById('activityList');
+        const actionIcons = { thinking:'brain', generating:'pen-tool', reviewing:'eye', complete:'check-circle', error:'alert-circle' };
+        const actionLabels = { thinking:'思考中', generating:'生成中', reviewing:'审视中', complete:'完成任务', error:'遇到错误' };
+        if (agentLogs.length) {
+            activityList.innerHTML = agentLogs.map(l => {
+                const task = tasks.find(t => t.id === l.taskId);
+                return `<div class="activity-item">
+                    <div class="activity-icon"><i data-lucide="${actionIcons[l.action]||'activity'}"></i></div>
+                    <div class="activity-content">
+                        <div class="text">${actionLabels[l.action] || l.action}${task ? ' — <a href="task-detail.html?id=' + task.id + '">' + task.title + '</a>' : ''}</div>
+                        <div class="time">${new Date(l.timestamp).toLocaleString()}</div>
+                    </div>
+                </div>`;
+            }).join('');
+        } else {
+            activityList.innerHTML = `<div class="empty-state-sm"><i data-lucide="activity"></i><p>暂无活动记录</p></div>`;
+        }
+
+        lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+    })();
+    </script>
+    <script src="utils.js"></script>
+    <script src="store.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            function syncProject() {
+                const project = Store.getCurrentProject();
+                if (project) {
+                    const nameEl = document.getElementById('currentProjectName');
+                    if (nameEl) nameEl.textContent = project.name;
+                    const bcEl = document.getElementById('breadcrumbProject');
+                    if (bcEl) bcEl.textContent = project.name;
+                }
+            }
+            syncProject();
+            Store.subscribe('currentProjectId', () => {
+                syncProject();
+            });
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作台 - 0xDraft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .stats-row {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg); padding: 20px; text-align: center;
+            transition: all var(--transition-fast);
+        }
+        .stat-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
+        .stat-card .value {
+            font-size: 28px; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 4px;
+        }
+        .stat-card .label { font-size: 13px; color: var(--text-secondary); }
+
+        .modules-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+            margin-bottom: 24px;
+        }
+        .module-card {
+            background: var(--bg-card); border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg); padding: 24px;
+            transition: all var(--transition-fast); text-decoration: none; color: inherit;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .module-card:hover {
+            border-color: var(--accent-blue); transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.1);
+        }
+        .module-card .icon {
+            width: 40px; height: 40px; border-radius: var(--radius-md);
+            background: rgba(99,102,241,0.1); display: flex;
+            align-items: center; justify-content: center; color: var(--accent-blue);
+        }
+        .module-card .icon i { width: 20px; height: 20px; }
+        .module-card h3 { font-size: 16px; font-weight: 600; }
+        .module-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; flex: 1; }
+        .module-card .link { font-size: 13px; color: var(--accent-blue); font-weight: 500; display: flex; align-items: center; gap: 4px; }
+
+        .recent-section {
+            background: var(--bg-card); border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg); overflow: hidden;
+        }
+        .recent-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border-default);
+            background: var(--bg-secondary); font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .recent-header i { width: 16px; height: 16px; color: var(--accent-blue); }
+        .recent-body { padding: 16px 20px; }
+        .recent-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 0; border-bottom: 1px solid var(--border-default);
+        }
+        .recent-item:last-child { border-bottom: none; }
+        .recent-item .dot {
+            width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        }
+        .recent-item .text { flex: 1; font-size: 14px; }
+        .recent-item .time { font-size: 12px; color: var(--text-muted); }
+
+        @media (max-width: 992px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .modules-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .modules-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Projects Section */
+        .projects-section { margin-bottom: 24px; }
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .section-header h2 {
+            font-size: 18px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .projects-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
+        }
+        .project-card {
+            background: var(--bg-card); border: 1px solid var(--border-default);
+            border-radius: var(--radius-lg); padding: 20px;
+            transition: all var(--transition-fast); cursor: pointer;
+            position: relative;
+        }
+        .project-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); }
+        .project-card.active { border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .project-card-header {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+        }
+        .project-card-icon {
+            width: 40px; height: 40px; border-radius: var(--radius-md);
+            background: var(--gradient-primary); display: flex;
+            align-items: center; justify-content: center; color: white; flex-shrink: 0;
+        }
+        .project-card-icon i { width: 20px; height: 20px; }
+        .project-card-name {
+            font-size: 15px; font-weight: 600;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .project-card-desc {
+            font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+            margin-bottom: 12px;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .project-card-footer {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .project-card-status {
+            font-size: 12px; color: var(--accent-green);
+            display: flex; align-items: center; gap: 4px;
+        }
+        .project-card-status i { width: 12px; height: 12px; }
+        .switch-project-btn {
+            padding: 6px 14px; border-radius: var(--radius-md);
+            border: 1px solid var(--border-default); background: var(--bg-secondary);
+            color: var(--text-secondary); font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all var(--transition-fast);
+        }
+        .switch-project-btn:hover {
+            border-color: var(--accent-blue); color: var(--accent-blue); background: rgba(99,102,241,0.05);
+        }
+        .switch-project-btn.active {
+            background: var(--accent-blue); color: white; border-color: var(--accent-blue);
+        }
+
+            /* Project Selector in Header */
+        .project-selector { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-default); border-radius: var(--radius-md); cursor: pointer; margin-left: 16px; transition: all var(--transition-fast); }
+        .project-selector:hover { border-color: var(--accent-blue); }
+        .project-selector-info { display: flex; flex-direction: column; }
+        .project-selector-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .project-selector-name { font-size: 13px; font-weight: 600; color: var(--text-primary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .project-selector i { width: 14px; height: 14px; color: var(--text-secondary); }
+
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <a href="index.html" class="logo" style="text-decoration:none;color:inherit;">
+                    <div class="logo-icon"><i data-lucide="bot" class="logo-botsvg"></i></div>
+                    <div class="logo-text">
+                        <span class="logo-title">0xDraft</span>
+                        <span class="logo-subtitle">Multi-Agent Team</span>
+                    </div>
+                </a>
+
+                <div class="project-selector" onclick="window.location.href='index.html'">
+                    <div class="project-selector-info">
+                        <span class="project-selector-label">当前项目</span>
+                        <span class="project-selector-name" id="currentProjectName">载入中...</span>
+                    </div>
+                    <i data-lucide="chevron-down"></i>
+                </div>
+
+                <nav class="page-nav">
+                    <a href="index.html" class="page-nav-item active"><i data-lucide="layout-dashboard"></i> 首页</a>
+                    <a href="analysis.html" class="page-nav-item"><i data-lucide="lightbulb"></i> 分析</a>
+                    <a href="kanban.html" class="page-nav-item"><i data-lucide="layout-grid"></i> 看板</a>
+                    <a href="agents.html" class="page-nav-item"><i data-lucide="users"></i> Agent</a>
+                    <a href="preview.html" class="page-nav-item"><i data-lucide="file-text"></i> 预览</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" title="通知"><i data-lucide="bell"></i><span class="badge">3</span></button>
+                <div class="user-avatar"><span>U</span></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="page-container">
+                <nav class="breadcrumb">
+                    <a href="index.html"><i data-lucide="home"></i> 首页</a>
+                    <i data-lucide="chevron-right"></i>
+                    <span id="breadcrumbProject">项目名</span>
+                    <i data-lucide="chevron-right"></i>
+                    <span>工作台</span>
+                </nav>
+
+                <div class="page-header-bar">
+                    <div>
+                        <h1><i data-lucide="bot" style="color:var(--accent-blue);"></i> 0xDraft 工作台</h1>
+                        <p>欢迎回来！您的 Multi-Agent 团队协作平台已就绪。从下方模块开始工作。</p>
+                    </div>
+                </div>
+
+                <div class="stats-row" id="dashboardStats">
+                    <div class="stat-card">
+                        <div class="value" id="dashTaskTotal" style="color:var(--accent-blue);">0</div>
+                        <div class="label">总任务</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="dashTaskDone" style="color:var(--accent-green);">0</div>
+                        <div class="label">已完成</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="dashAgentCount" style="color:var(--accent-purple);">0</div>
+                        <div class="label">Agent数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="value" id="dashProgress" style="color:var(--accent-cyan);">0%</div>
+                        <div class="label">总进度</div>
+                    </div>
+                </div>
+
+                <div class="projects-section">
+                    <div class="section-header">
+                        <h2><i data-lucide="folder"></i> 我的项目</h2>
+                        <button class="btn btn-primary btn-sm" id="newProjectBtn">
+                            <i data-lucide="plus"></i> 新建项目
+                        </button>
+                    </div>
+                    <div class="projects-grid" id="projectsGrid">
+                        <!-- Projects rendered by JS -->
+                    </div>
+                </div>
+
+                <div class="modules-grid">
+                    <a href="analysis.html" class="module-card">
+                        <div class="icon"><i data-lucide="lightbulb"></i></div>
+                        <h3>需求分析</h3>
+                        <p>输入项目需求，AI Agent 自动分析并生成文档结构、技术栈建议和章节规划。</p>
+                        <span class="link">进入分析 <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </a>
+                    <a href="kanban.html" class="module-card">
+                        <div class="icon"><i data-lucide="layout-grid"></i></div>
+                        <h3>任务看板</h3>
+                        <p>拖拽式看板管理文档创作流程，跟踪每个章节的任务状态和进度。</p>
+                        <span class="link">打开看板 <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </a>
+                    <a href="agents.html" class="module-card">
+                        <div class="icon"><i data-lucide="users"></i></div>
+                        <h3>Agent 管理</h3>
+                        <p>管理 AI Agent 团队，查看各 Agent 的任务分配、专长和在线状态。</p>
+                        <span class="link">管理 Agent <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </a>
+                    <a href="preview.html" class="module-card">
+                        <div class="icon"><i data-lucide="file-text"></i></div>
+                        <h3>文档预览</h3>
+                        <p>实时预览整合后的概念设计文档，支持章节导航和 Markdown 导出。</p>
+                        <span class="link">查看文档 <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </a>
+                    <a href="task-detail.html" class="module-card">
+                        <div class="icon"><i data-lucide="check-square"></i></div>
+                        <h3>任务详情</h3>
+                        <p>浏览全部任务列表，编辑任务内容、查看执行日志和关联任务。</p>
+                        <span class="link">查看任务 <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </a>
+                    <a href="settings.html" class="module-card">
+                        <div class="icon"><i data-lucide="settings"></i></div>
+                        <h3>系统设置</h3>
+                        <p>配置项目信息、章节模板、导出选项和数据管理。</p>
+                        <span class="link">进入设置 <i data-lucide="arrow-right" style="width:14px;height:14px;"></i></span>
+                    </a>
+                </div>
+
+                <div class="recent-section">
+                    <div class="recent-header"><i data-lucide="activity"></i> 最近动态</div>
+                    <div class="recent-body" id="recentActivity">
+                        <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">暂无最近动态</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left">
+                <span class="status-indicator online"></span>
+                <span>系统就绪</span>
+            </div>
+            <div class="footer-center">
+                <span id="lastUpdate">最后更新: --</span>
+            </div>
+            <div class="footer-right">
+                <a href="settings.html" class="footer-btn" title="系统设置">
+                    <i data-lucide="settings"></i>
+                </a>
+                <button class="footer-btn" id="clearDataBtn" title="清除所有数据">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- New Project Modal -->
+    <div class="modal-overlay" id="projectModalOverlay">
+        <div class="modal" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="folder-plus"></i> 新建项目</h3>
+                <button class="modal-close" id="closeProjectModal"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">项目名称</label>
+                    <input type="text" class="form-input" id="newProjectName" placeholder="例如：官网重构">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">项目描述</label>
+                    <textarea class="form-textarea" id="newProjectDesc" placeholder="简要描述项目内容..." style="min-height: 80px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelProjectBtn">取消</button>
+                <button class="btn btn-primary" id="saveProjectBtn"><i data-lucide="check"></i> 创建</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="store.js"></script>
+    <script>
+        function updateDashboard() {
+            const tasks = Store.getTasks();
+            const agents = Store.getAgents();
+            const doneTasks = tasks.filter(t => t.status === 'done' || t.status === 'published');
+            const progress = tasks.length ? Math.round((doneTasks.length / tasks.length) * 100) : 0;
+
+            document.getElementById('dashTaskTotal').textContent = tasks.length;
+            document.getElementById('dashTaskDone').textContent = doneTasks.length;
+            document.getElementById('dashAgentCount').textContent = agents.length;
+            document.getElementById('dashProgress').textContent = progress + '%';
+
+            // Render recent activity
+            const logs = Store.getLogs();
+            const recent = logs.slice(-5).reverse();
+            const container = document.getElementById('recentActivity');
+            if (recent.length) {
+                const actionLabels = { thinking:'思考中', generating:'生成中', reviewing:'自审中', complete:'已完成', error:'出错' };
+                container.innerHTML = recent.map(l => `
+                    <div class="recent-item">
+                        <span class="dot" style="background:${l.action==='error'?'var(--accent-red)':l.action==='complete'?'var(--accent-green)':'var(--accent-blue)'}"></span>
+                        <span class="text">${actionLabels[l.action] || l.action}</span>
+                        <span class="time">${new Date(l.timestamp).toLocaleTimeString('zh-CN')}</span>
+                    </div>
+                `).join('');
+            }
+
+            const lastUpdateEl = document.getElementById('lastUpdate');
+            if (lastUpdateEl) {
+                lastUpdateEl.textContent = `最后更新: ${new Date().toLocaleTimeString('zh-CN')}`;
+            }
+        }
+
+        function renderProjects() {
+            const projects = Store.get('projects') || [];
+            const currentId = Store.state.currentProjectId;
+            const grid = document.getElementById('projectsGrid');
+
+            if (!projects.length) {
+                grid.innerHTML = `
+                    <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text-secondary);font-size:13px;">
+                        <i data-lucide="folder-open" style="width:32px;height:32px;margin-bottom:8px;opacity:0.4;display:block;margin-left:auto;margin-right:auto;"></i>
+                        暂无项目，点击右上角创建第一个项目
+                    </div>
+                `;
+                lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+                return;
+            }
+
+            grid.innerHTML = projects.map(p => {
+                const isActive = p.id === currentId;
+                return `
+                    <div class="project-card ${isActive ? 'active' : ''}" data-project-id="${p.id}">
+                        <div class="project-card-header">
+                            <div class="project-card-icon">
+                                <i data-lucide="folder"></i>
+                            </div>
+                            <div class="project-card-name">${p.name}</div>
+                        </div>
+                        <div class="project-card-desc">${p.description || '暂无描述'}</div>
+                        <div class="project-card-footer">
+                            <div class="project-card-status">
+                                <i data-lucide="check-circle-2"></i>
+                                ${isActive ? '当前项目' : '已创建'}
+                            </div>
+                            <button class="switch-project-btn ${isActive ? 'active' : ''}" data-project-id="${p.id}">
+                                ${isActive ? '使用中' : '切换'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Bind card clicks to switch project
+            grid.querySelectorAll('.project-card').forEach(card => {
+                card.addEventListener('click', (e) => {
+                    if (e.target.closest('.switch-project-btn')) return;
+                    const pid = card.dataset.projectId;
+                    Store.switchProject(pid);
+                    renderProjects();
+                    updateDashboard();
+                });
+            });
+
+            grid.querySelectorAll('.switch-project-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const pid = btn.dataset.projectId;
+                    Store.switchProject(pid);
+                    renderProjects();
+                    updateDashboard();
+                });
+            });
+
+            lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDashboard();
+            renderProjects();
+            lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
+
+            // Subscribe to changes
+            Store.subscribe('tasks', updateDashboard);
+            Store.subscribe('agents', updateDashboard);
+            Store.subscribe('logs', updateDashboard);
+            Store.subscribe('projects', renderProjects);
+            Store.subscribe('currentProjectId', () => {
+                renderProjects();
+                updateDashboard();
+            });
+        });
+
+        document.getElementById('clearDataBtn')?.addEventListener('click', () => {
+            if (confirm('确定要清除所有数据吗？此操作不可撤销。')) {
+                Store.clearAll();
+                updateDashboard();
+                renderProjects();
+            }
+        });
+
+        // ==================== New Project Modal ====================
+        const projectModalOverlay = document.getElementById('projectModalOverlay');
+        const newProjectBtn = document.getElementById('newProjectBtn');
+        const closeProjectModal = document.getElementById('closeProjectModal');
+        const cancelProjectBtn = document.getElementById('cancelProjectBtn');
+        const saveProjectBtn = document.getElementById('saveProjectBtn');
+
+        function openProjectModal() {
+            projectModalOverlay.classList.add('active');
+            document.getElementById('newProjectName').focus();
+        }
+        function closeProjectModalFn() {
+            projectModalOverlay.classList.remove('active');
+            document.getElementById('newProjectName').value = '';
+            document.getElementById('newProjectDesc').value = '';
+        }
+
+        newProjectBtn.addEventListener('click', openProjectModal);
+        closeProjectModal.addEventListener('click', closeProjectModalFn);
+        cancelProjectBtn.addEventListener('click', closeProjectModalFn);
+        projectModalOverlay.addEventListener('click', (e) => {
+            if (e.target === projectModalOverlay) closeProjectModalFn();
+        });
+
+        saveProjectBtn.addEventListener('click', () => {
+            const name = document.getElementById('newProjectName').value.trim();
+            const desc = document.getElementById('newProjectDesc').value.trim();
+
+            if (!name) {
+                alert('请输入项目名称');
+                return;
+            }
+
+            Store.createProject(name, desc);
+            closeProjectModalFn();
+            renderProjects();
+            updateDashboard();
+        });
+
+        // Project sync in header
+        function syncProject() {
+            const project = Store.getCurrentProject();
+            if (project) {
+                const nameEl = document.getElementById('currentProjectName');
+                if (nameEl) nameEl.textContent = project.name;
+                const bcEl = document.getElementById('breadcrumbProject');
+                if (bcEl) bcEl.textContent = project.name;
+            }
+        }
+        syncProject();
+        Store.subscribe('currentProjectId', () => {
+            syncProject();
+        });
+    </script>
+
+</body>
+</html>
